@@ -15,6 +15,7 @@ from movie_it.cache_keys import USER_CACHE, ITEM_CACHE
 from movie_it.recommend_movies import recommend_by_user_id, recommend_by_item_id
 from .forms import *
 
+################### Deprecated ###################### --C.Ren
 
 def movies_paginator(movies, page):
     paginator = Paginator(movies, 12)

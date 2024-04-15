@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 from movie.models import Movie
 
-
+################### Deprecated ###################### --C.Ren
 class MovieSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Movie

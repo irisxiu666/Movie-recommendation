@@ -2,6 +2,7 @@ from django import forms
 
 from .models import *
 
+################### Deprecated ###################### --C.Ren
 #登录
 class Login(forms.Form):
     username = forms.CharField(

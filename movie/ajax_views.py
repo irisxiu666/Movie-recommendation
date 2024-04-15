@@ -25,6 +25,7 @@ def movies_paginator(movies, page):
     return movies
 
 
+# Converts python objects to json type dictionary
 def to_dict(l):
     def _todict(obj):
         j = {k: v for k, v in obj.__dict__.items() if not k.startswith("_")}
@@ -43,15 +44,15 @@ class JSONResponse(HttpResponse):
 
 def choose_tags(request):
     data = request.json
-    print(data)
+    # print(data) DEBUG
     tags_name = data.get("tags_name")
     for tag_name in tags_name:
+        # create user tag relationship based on user selected tag
         tag = Tags.objects.filter(name=tag_name.strip()).first()
         UserTagPrefer.objects.create(tag_id=tag.id, user_id=request.user_.id, score=5)
     return success()
 
 def login(request):
-    # 登录功能
     data = request.json
     username = data.get('username')
     password = data.get('password')
@@ -77,11 +78,10 @@ def get_user(request):
 
 
 def register(request):
-    # 注册功能
     data = request.json
-    if not all((data.get("username"), data.get("password1"), data.get("password2"))):
+    if not all((data.get("username"), data.get("password1"), data.get("password2"))): # if any entry is missing
         return error("Incomplete information")
-    if data.get("password1") != data.get("password2"):
+    if data.get("password1") != data.get("password2"):                                # if two passwords does not match
         return error("inconsistent passwords")
     if User.objects.filter(username=data.get("username")).exists():
         return error("Account already exits")
@@ -93,17 +93,18 @@ def register(request):
     return success(data=user.id)
 
 
-def login_in(func):  # 验证用户是否登录
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        request = args[0]
-        is_login = request.session.get("login_in")
-        if is_login:
-            return func(*args, **kwargs)
-        else:
-            return redirect(reverse("login"))
-
-    return wrapper
+# TODO: not used anywhere C.Ren
+# def login_in(func):
+#     @wraps(func)
+#     def wrapper(*args, **kwargs):
+#         request = args[0]
+#         is_login = request.session.get("login_in")
+#         if is_login:
+#             return func(*args, **kwargs)
+#         else:
+#             return redirect(reverse("login"))
+#
+#     return wrapper
 
 
 def recent_movies(request):
@@ -112,21 +113,15 @@ def recent_movies(request):
 
 
 def user_recommend(request):
-    # 基于用户推荐
     # cache_key = USER_CACHE.format(user_id=user_id)
     user_id = request.user_.id
-    if user_id is None:
+    if user_id is None:                                     # if user_id is not provided
         movie_list = Movie.objects.order_by('?')
     else:
         cache_key = USER_CACHE.format(user_id=user_id)
         movie_list = cache.get(cache_key)
-        # TODO 不要缓存
-        # if movie_list is None:
-        movie_list = recommend_by_user_id(user_id)
+        movie_list = recommend_by_user_id(user_id)          # get recommended movies based on user_id
         cache.set(cache_key, movie_list, 60 * 5)
-        print('设置缓存')
-        # else:
-        #     print('缓存命中!')
 
     json_movies = to_dict(movie_list)
     random.shuffle(json_movies)
@@ -134,19 +129,15 @@ def user_recommend(request):
 
 
 def item_recommend(request):
-    # 基于物品推荐
     user_id = request.user_.id
     if user_id is None:
         movie_list = Movie.objects.order_by('?')
     else:
         cache_key = ITEM_CACHE.format(user_id=user_id)
         movie_list = cache.get(cache_key)
-        # if movie_list is None:
         movie_list = recommend_by_item_id(user_id)
         cache.set(cache_key, movie_list, 60 * 5)
-        print('设置缓存')
-        # else:
-        #     print('缓存命中!')
+
     json_movies = to_dict(movie_list)
     random.shuffle(json_movies)
     return success(json_movies[:3])
@@ -158,17 +149,17 @@ def movies(request):
     page = data.get('page', 1)
     order = data.get('order', 'num')
     tag = data.get('tag')
-    if order == 'collect':
+    if order == 'collect':        # movies are ordered by number of saved times
         movies = Movie.objects.annotate(
             collectors=Count('collect')).order_by('-collectors')
         title = 'Collection sort'
-    elif order == 'rate':
+    elif order == 'rate':         # movies are ordered by rating
         movies = Movie.objects.all().annotate(marks=Avg('rate__mark')).order_by('-marks')
         title = 'Rating sort'
-    elif order == 'years':
+    elif order == 'years':        # movies are ordered by released date
         movies = Movie.objects.order_by('-years')
         title = 'Time sort'
-    else:
+    else:                         # movies are ordered by id
         movies = Movie.objects.order_by('-id')
         title = 'Popularity sort'
     if tag:
@@ -186,6 +177,7 @@ def search_movies(request):
     pagesize = data.get('pagesize', 5)
     page = data.get('page', 1)
     keyword = data.get('keyword', '')
+    # match a movie if movie's name/director/leader contains user provided keyword
     q = Q(name__icontains=keyword) | Q(
         director__icontains=keyword) | Q(leader__icontains=keyword)
     movies = Movie.objects.filter(q).order_by('name')
@@ -195,7 +187,6 @@ def search_movies(request):
 
 
 def movie(request, movie_id):
-    # 电影详情
     movie = Movie.objects.get(pk=movie_id)
     movie.num += 1
     movie.save()
@@ -209,7 +200,7 @@ def movie(request, movie_id):
     result['comments'] = to_dict(comments)
     user_id = request.user_.id
     movie_rate = Rate.objects.filter(
-        movie=movie).all().aggregate(Avg('mark'))  # 电影评分
+        movie=movie).all().aggregate(Avg('mark'))
     if movie_rate:
         movie_rate = movie_rate['mark__avg']
     else:
@@ -230,45 +221,44 @@ def movie(request, movie_id):
     return success(result)
 
 
-def search(request):  # 搜索
-    if request.method == "POST":  # 如果搜索界面
+def search(request):
+    if request.method == "POST":         # If we are searching page
         key = request.POST["search"]
-        request.session["search"] = key  # 记录搜索关键词解决跳页问题
+        request.session["search"] = key
     else:
-        key = request.session.get("search")  # 得到关键词
+        key = request.session.get("search")  # Get search keyword
     movies = Movie.objects.filter(
         Q(name__icontains=key) | Q(intro__icontains=key) | Q(
             director__icontains=key)
-    )  # 进行内容的模糊搜索
+    )                                        # Fuzzy search
     page_num = request.GET.get("page", 1)
     movies = movies_paginator(movies, page_num)
     return render(request, "items.html", {"movies": movies, 'title': 'Search result'})
 
 
 def all_tags(request):
-    # 所有标签
     tags = Tags.objects.all()
     return success(to_dict(tags))
 
 
+# Rate a movie
 def score(request, movie_id):
-    # 给电影打分 在打分的时候清除缓存
     user_id = request.user_.id
-    # user = User.objects.get(id=user_id)
     movie = Movie.objects.get(id=movie_id)
     score = float(request.json.get("score"))
     get, created = Rate.objects.get_or_create(
         user_id=user_id, movie=movie, defaults={"mark": score})
     if created:
+        # for this movie's all tags
         for tag in movie.tags.all():
             prefer, created = UserTagPrefer.objects.get_or_create(
                 user_id=user_id, tag=tag, defaults={'score': score})
             if not created:
-                # 更新分数
+                # we update the current tag score
                 prefer.score += (score - 3)
                 prefer.save()
         print('create data')
-        # 清理缓存
+        # clear cache
         user_cache = USER_CACHE.format(user_id=user_id)
         item_cache = ITEM_CACHE.format(user_id=user_id)
         cache.delete(user_cache)
@@ -277,27 +267,24 @@ def score(request, movie_id):
     return success()
 
 
+# Like a movie
 def collect(request, movie_id):
-    # 收藏电影
     user = request.user_
     movie = Movie.objects.get(id=movie_id)
     movie.collect.add(user)
     movie.save()
     return success()
 
-
+# Dislike a movie
 def decollect(request, movie_id):
-    # 取消收藏电影
     user = request.user_
     movie = Movie.objects.get(id=movie_id)
     movie.collect.remove(user)
-    # movie.rate_set.count()
     movie.save()
     return success()
 
 
 def make_comment(request, movie_id):
-    # 给电影进行评论
     user = request.user_
     movie = Movie.objects.get(id=movie_id)
     comment = request.json.get("comment")
@@ -309,18 +296,16 @@ def personal(request):
     user = request.user_
     return success(to_dict([user])[0])
 
-
+# Return all liked movies
 def mycollect(request):
-    # 我的收藏
     user = request.user_
     movie = user.movie_set.all()
     for i in movie:
         i.all_tags = to_dict(i.tags.all())
     return success(to_dict(movie))
 
-
+# Show all my comments
 def my_comments(request):
-    # 展示我的评论的地方
     user = request.user_
     comments = user.comment_set.all()
     for i in comments:
@@ -334,7 +319,6 @@ def delete_comment(request, comment_id):
 
 
 def my_rate(request):
-    # 我的评分
     user = request.user_
     rate = user.rate_set.all()
     for i in rate:

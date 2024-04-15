@@ -1,5 +1,5 @@
 '''
-用户对电影的打分数据，以及对电影的评论模型的建立。
+User gives ratings and comment to movies. Models are created based on ratings and comments.
 '''
 from datetime import datetime
 from datetime import date
@@ -7,9 +7,9 @@ from django.db import models
 from django.db.models import Avg
 from django.db.models.fields.files import FileField
 from itertools import chain
-#数据库表
+# Database tables
 class User(models.Model):
-    username = models.CharField(max_length=255, unique=True, verbose_name="account")#unique
+    username = models.CharField(max_length=255, unique=True, verbose_name="account")   #unique
     password = models.CharField(max_length=255, verbose_name="password")
     email = models.EmailField(verbose_name="email")
     created_time = models.DateTimeField(auto_now_add=True)
@@ -49,7 +49,7 @@ class UserTagPrefer(models.Model):
 
 
 class Movie(models.Model):
-    tags = models.ManyToManyField(Tags, verbose_name='Tag', blank=True)#多对多关系
+    tags = models.ManyToManyField(Tags, verbose_name='Tag', blank=True)
     collect = models.ManyToManyField(User, verbose_name="Collector", blank=True)
     name = models.CharField(verbose_name="Title", max_length=255, unique=True)
     director = models.CharField(verbose_name="Director Name", max_length=255)
@@ -92,7 +92,7 @@ class Movie(models.Model):
             data[f.name] = value
         return data
 
-#用户对电影打分数据
+# Users' rating for movies
 class Rate(models.Model):
     movie = models.ForeignKey(
         Movie, on_delete=models.CASCADE, blank=True, null=True, verbose_name="Movieid"
@@ -105,16 +105,16 @@ class Rate(models.Model):
 
     @property
     def avg_mark(self):
-        average = Rate.objects.all().aggregate(Avg('mark'))['mark__avg']#求平均分
+        average = Rate.objects.all().aggregate(Avg('mark'))['mark__avg']   # get an average mark
         return average
 
     class Meta:
         verbose_name = "RatingInfo"
         verbose_name_plural = verbose_name
 
-#电影评论表
+# Movies' comments
 class Comment(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="User")#外建关联
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="User") # Foreign key
     content = models.CharField(max_length=255, verbose_name="Content")
     create_time = models.DateTimeField(auto_now_add=True)
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, verbose_name="Movie")
