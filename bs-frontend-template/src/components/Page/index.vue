@@ -46,7 +46,7 @@
                                     style="margin-bottom:10px;display:block;text-align:left"
                                 >{{ m.name }}</el-button>
                                 <p>{{ m.years }}</p>
-                                <p>评分: {{ m.d_rate }}</p>
+                                <p>Rating: {{ m.d_rate }}</p>
                             </div>
                         </div>
                     </el-card>
