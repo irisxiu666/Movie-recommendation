@@ -32,7 +32,7 @@ export default defineComponent({
         },
         title: {
             type: String,
-            default: '新窗口'
+            default: 'New window'
         }
     },
     emits: ['update:show'],

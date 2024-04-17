@@ -13,7 +13,7 @@
                 </el-button-group> -->
       </div>
       <el-button type="text" @click="toggleSearch">
-        高级搜索
+        Advanced Search
         <i
           :class="{ 'el-icon-arrow-down': !isShow, 'el-icon-arrow-up': isShow }"
         />
